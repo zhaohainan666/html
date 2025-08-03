@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高管AI工具交互式实战手册 (v3)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Neutrals with Tech Blue Accent -->
+    <!-- Application Structure Plan: The application is structured as a tab-based single-page application (SPA) to provide a task-oriented, non-linear user experience. This design is superior to a simple document scroll for a busy executive, allowing them to jump directly to the section most relevant to their current need. The four tabs—'AI工具箱' (AI Toolkit), '提示词工坊' (Prompt Workshop), '实战演练' (Scenarios), and '高级策略' (Advanced Strategy)—logically group the report's content into actionable modules. This structure facilitates focused learning: users can first select the right tool, then learn how to prompt it, see it in action, and finally explore advanced concepts. -->
+    <!-- Visualization & Content Choices: 
+        1. AI Toolkit: The static comparison table is transformed into an interactive bar chart (Chart.js). Goal: Compare & Guide. Interaction: User clicks a task, and the chart dynamically highlights the best tools, with a new section below explaining the reasoning for the scores. Justification: This visual and interactive comparison is faster to parse and more engaging than a static table, and the added reasoning provides crucial context for decision-making.
+        2. Prompt Workshop: The PCTF framework is presented as an interactive prompt builder. Goal: Teach Prompting. Interaction: User fills in fields (or uses examples) to see a prompt being constructed in real-time. The refinement loop is shown as a simulated chat. Justification: This hands-on approach solidifies the learning of the abstract framework.
+        3. Scenarios: Use cases are displayed in an accordion format. Goal: Demonstrate Application. Interaction: Click-to-expand sections for focused reading. Justification: Prevents information overload by showing one detailed scenario at a time.
+        4. Advanced Strategy: Key concepts are presented in visually distinct cards with icons. Goal: Inform. Interaction: Simple, clear presentation for quick absorption. Justification: Breaks down complex ideas into digestible, memorable chunks.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f8f9fa; /* Light neutral background */
+        }
+        .tab-active {
+            border-color: #2563eb; /* Tech Blue */
+            color: #2563eb;
+            font-weight: 500;
+            background-color: #eff6ff;
+        }
+        .tab-inactive {
+            border-color: transparent;
+            color: #4b5563; /* Gray */
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+            max-height: 50vh;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 350px;
+                max-height: 60vh;
+            }
+        }
+        .prompt-preview {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            border-left: 4px solid #2563eb;
+        }
+        .chat-bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+        }
+        .chat-bubble-user {
+            background-color: #2563eb;
+            color: white;
+            align-self: flex-end;
+        }
+        .chat-bubble-ai {
+            background-color: #e5e7eb;
+            color: #1f2937;
+            align-self: flex-start;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">高管AI工具交互式实战手册</h1>
+            <p class="mt-2 text-lg text-gray-600">一个为科技领导者设计的动态决策与效率工具</p>
+        </header>
+
+        <nav class="mb-8 border-b border-gray-200">
+            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="main-tabs">
+                <li class="mr-2">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg tab-active" data-tab="toolkit">
+                        <span class="text-xl mr-2">🧰</span> AI工具箱
+                    </button>
+                </li>
+                <li class="mr-2">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg tab-inactive" data-tab="workshop">
+                        <span class="text-xl mr-2">💡</span> 提示词工坊
+                    </button>
+                </li>
+                <li class="mr-2">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg tab-inactive" data-tab="scenarios">
+                        <span class="text-xl mr-2">🚀</span> 实战演练
+                    </button>
+                </li>
+                <li>
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg tab-inactive" data-tab="strategy">
+                        <span class="text-xl mr-2">🧠</span> 高级策略
+                    </button>
+                </li>
+            </ul>
+        </nav>
+
+        <main>
+            <!-- Section 1: AI Toolkit -->
+            <section id="toolkit" class="content-section active">
+                <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <h2 class="text-2xl font-bold mb-2">因事择器：高管决策框架</h2>
+                    <p class="text-gray-600 mb-6">不同的任务需要不同的工具。此模块帮助您根据具体的高管任务，快速选择最合适的AI平台。点击下方的任务按钮，查看各工具在该场景下的实力对比及评分理由。</p>
+                    
+                    <div class="mb-6 flex flex-wrap gap-2 justify-center" id="task-buttons">
+                    </div>
+
+                    <div class="chart-container">
+                        <canvas id="toolChart"></canvas>
+                    </div>
+
+                    <div id="chart-reasoning" class="mt-8 p-6 bg-gray-50 rounded-lg">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Prompt Workshop -->
+            <section id="workshop" class="content-section">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h2 class="text-2xl font-bold mb-2">提示词的艺术：PCTF框架</h2>
+                        <p class="text-gray-600 mb-6">一个好的提示词是高质量输出的关键。使用PCTF框架（角色-背景-任务-格式）来系统地构建您的指令。请在下方尝试构建您自己的提示词。</p>
+                        
+                        <div class="space-y-4" id="pctf-builder">
+                            <div>
+                                <label class="font-bold text-gray-700">P (角色):</label>
+                                <input type="text" data-pctf="P" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="例如：你是一位经验丰富的金融分析师。">
+                            </div>
+                            <div>
+                                <label class="font-bold text-gray-700">C (背景):</label>
+                                <textarea data-pctf="C" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" rows="3" placeholder="例如：这份分析的目标受众是董事会，他们需要了解核心风险。"></textarea>
+                            </div>
+                            <div>
+                                <label class="font-bold text-gray-700">T (任务):</label>
+                                <textarea data-pctf="T" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" rows="3" placeholder="例如：识别三大核心风险，并提出三个战略机遇。"></textarea>
+                            </div>
+                            <div>
+                                <label class="font-bold text-gray-700">F (格式):</label>
+                                <input type="text" data-pctf="F" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="例如：以一页纸的执行摘要形式输出，包含要点列表。">
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            <h3 class="text-lg font-semibold mb-2">生成的提示词预览:</h3>
+                            <div id="prompt-output" class="p-4 rounded-md font-mono text-sm leading-relaxed prompt-preview min-h-[100px]"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h2 class="text-2xl font-bold mb-2">精炼循环：通过对话提升质量</h2>
+                        <p class="text-gray-600 mb-6">优秀的AI使用者将交互视为一场对话。通过不断的反馈和调整，将初稿打磨成完美的最终成果。以下是一个模拟对话：</p>
+                        <div class="space-y-4 flex flex-col h-[85%] overflow-y-auto p-2 bg-gray-50 rounded-lg">
+                            <div class="chat-bubble chat-bubble-user">
+                                扮演我的首席幕僚。阅读附件中的季度财务报告，为董事会撰写一份一页纸的执行摘要。
+                            </div>
+                            <div class="chat-bubble chat-bubble-ai">
+                                当然，这是执行摘要的初稿...
+                            </div>
+                            <div class="chat-bubble chat-bubble-user">
+                                不错的开始，但风格太学术。用更直接、商业化的语调重写，并多关注财务影响。
+                            </div>
+                            <div class="chat-bubble chat-bubble-ai">
+                                理解。已更新为更商业化的语调，并突出了财务重点...
+                            </div>
+                             <div class="chat-bubble chat-bubble-user">
+                                好多了。现在，展开风险分析部分，并从报告中引用具体数据来支撑你的论点。
+                            </div>
+                             <div class="chat-bubble chat-bubble-ai">
+                                已完成。风险分析部分现已包含数据支撑...
+                            </div>
+                            <div class="chat-bubble chat-bubble-user">
+                                非常出色。最后，整理成一份备忘录格式，包含标题和核心摘要。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Scenarios -->
+            <section id="scenarios" class="content-section">
+                 <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <h2 class="text-2xl font-bold mb-2">高管工作流的高效应用场景</h2>
+                    <p class="text-gray-600 mb-6">本部分将理论应用于高管日常工作中最核心的三个场景，提供具体的、可操作的实践指南。点击下方场景展开查看详情。</p>
+                    <div id="accordion-container" class="space-y-4"></div>
+                 </div>
+            </section>
+
+            <!-- Section 4: Strategy -->
+            <section id="strategy" class="content-section">
+                <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <h2 class="text-2xl font-bold mb-2">掌握高级功能与未来技能储备</h2>
+                    <p class="text-gray-600 mb-6">要真正将AI融入战略决策，高管需要了解并驾驭更高级的功能，并为AI技术的未来发展做好准备。</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="border border-gray-200 p-6 rounded-lg bg-blue-50">
+                            <h3 class="font-bold text-xl mb-2 text-blue-800">战略性模式选择</h3>
+                            <p class="text-gray-700">
+                                <strong>标准模式:</strong> 速度优先，适用于80%的日常查询。<br>
+                                <strong>深度思考模式:</strong> 质量优先，花费更多时间进行复杂推理和战略规划。当任务需要多步逻辑推演时，主动启用此模式以获得更高质量的答案。
+                            </p>
+                        </div>
+                        <div class="border border-gray-200 p-6 rounded-lg bg-green-50">
+                            <h3 class="font-bold text-xl mb-2 text-green-800">迭代反馈循环</h3>
+                            <p class="text-gray-700">
+                                将与AI的对话视为对“数字助理”的绩效管理：<br>
+                                1. <strong>设定预期:</strong> 高质量的初始指令。<br>
+                                2. <strong>审阅初稿:</strong> 评估输出。<br>
+                                3. <strong>给予反馈:</strong> 提出具体、可操作的修正。<br>
+                                4. <strong>固化经验:</strong> 保存成功的指令链作为模板。
+                            </p>
+                        </div>
+                        <div class="border border-gray-200 p-6 rounded-lg bg-purple-50">
+                            <h3 class="font-bold text-xl mb-2 text-purple-800">下一个前沿</h3>
+                            <p class="text-gray-700">
+                                <strong>自定义智能体:</strong> 创建您自己的AI版本，预设角色、指令和知识库，将常见复杂工作流自动化。<br>
+                                <strong>主动式AI:</strong> AI正从被动工具演变为能自主执行多步骤任务的主动代理（Agent），未来将能自主完成从监控到报告的全过程。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const appData = {
+        tools: ['ChatGPT-4o', 'Gemini 2.5 Pro', '通义千问2.5', '豆包-Pro', 'Kimi-K2'],
+        tasks: {
+            '全球科技趋势分析': [5, 5, 3, 3, 3],
+            '中国市场/政策分析': [3, 4, 5, 4, 5],
+            '内部海量报告提炼': [4, 5, 4, 4, 5],
+            '撰写政府会议发言稿（中文）': [3, 4, 5, 4, 4],
+            '撰写国际会议发言稿（英文）': [5, 5, 3, 3, 3],
+            '快速创意脑暴/文案': [5, 5, 4, 4, 4]
+        },
+        reasons: {
+            '全球科技趋势分析': {
+                'ChatGPT-4o': '卓越的英文理解与网络搜索能力，信息来源更透明，适合深度研究。',
+                'Gemini 2.5 Pro': '强大的实时搜索与谷歌生态集成，多模态分析能力强，能发现不同维度的信息。',
+                '通义千问2.5': '英文能力良好，但全球新闻覆盖和语境理解可能不及原生英文模型。',
+                '豆包-Pro': '侧重中文场景，全球信息扫描能力相对较弱，适合作为补充。',
+                'Kimi-K2': '具备联网能力，但其优势在于中文长文本，全球英文信息的广度和深度相对有限。'
+            },
+            '中国市场/政策分析': {
+                'ChatGPT-4o': '中文能力尚可，但缺乏对本土细微语境和政策术语的深度理解。',
+                'Gemini 2.5 Pro': '中文理解和推理能力有提升，但对本土语境的把握仍非其核心优势。',
+                '通义千问2.5': '顶级的中文理解能力，在本土评测中领先，更懂中国市场和政策。',
+                '豆包-Pro': '强大的中文能力，经过海量本土数据训练，理解贴近中国用户。',
+                'Kimi-K2': '中文理解能力出色，结合实时搜索，对中国本土话题的分析精准、深入。'
+            },
+            '内部海量报告提炼': {
+                'ChatGPT-4o': '上下文窗口较大，适合单份长报告，但处理多个大型文档时效率不及Gemini。',
+                'Gemini 2.5 Pro': '超大上下文窗口是决定性优势，可同时处理多个大型报告进行跨文档分析。',
+                '通义千问2.5': '提供长文本处理模型，适合处理大型中文文档，但跨文档能力受限。',
+                '豆包-Pro': '提供较大上下文窗口，能有效处理长篇文档，但综合分析能力略逊。',
+                'Kimi-K2': '核心优势，以支持超长无损上下文窗口闻名，是处理单篇超长报告的最佳选择之一。'
+            },
+            '撰写政府会议发言稿（中文）': {
+                'ChatGPT-4o': '可生成初稿，但语言风格和用词可能不够贴合官方语境。',
+                'Gemini 2.5 Pro': '生成的中文稿件流畅度高，但对官方语境的精准把握不如本土模型。',
+                '通义千问2.5': '最擅长处理符合中国官方语境的文本，语言风格和措辞更精准。',
+                '豆包-Pro': '中文生成能力强，能产出自然流畅的稿件，但需针对官方场合微调。',
+                'Kimi-K2': '中文生成质量高，风格自然，但官方语境的把握上可能需要微调。'
+            },
+            '撰写国际会议发言稿（英文）': {
+                'ChatGPT-4o': '英文创意写作和专业表达的行业标杆，风格多样且地道。',
+                'Gemini 2.5 Pro': '英文表达流畅自然，逻辑性强，与ChatGPT共同处于第一梯队。',
+                '通义千问2.5': '英文能力足以应对，但细微的文化和语言韵味上可能稍逊一筹。',
+                '豆包-Pro': '主要为中文优化，英文稿件可能需要更多人工润色。',
+                'Kimi-K2': '英文能力可用，但与原生英文模型在表达地道性和专业性上存在差距。'
+            },
+            '快速创意脑暴/文案': {
+                'ChatGPT-4o': '强大的创造力和联想能力，是激发新想法的最佳工具之一。',
+                'Gemini 2.5 Pro': '创意能力强，且回复速度通常较快，适合快速迭代想法。',
+                '通义千问2.5': '提供多种模型选择，包括创作能力强的版本，能生成高质量中文创意内容。',
+                '豆包-Pro': '界面友好，响应迅速，适合进行快速、轻松的头脑风暴。',
+                'Kimi-K2': '中文创意能力强，特别适合基于长文本背景的深度脑暴。'
+            }
+        },
+        scenarios: [
+            {
+                title: "场景一：掌控信息流——实时行业情报扫描",
+                content: `作为科技公司高管，及时掌握行业动态是决策的基础。AI工具可以成为您永不疲倦的情报分析师。`,
+                recommendation: "<strong>工具选择:</strong> 首选具备强大实时网页搜索能力的 <strong>ChatGPT</strong>、<strong>Gemini</strong> 和 <strong>Kimi</strong>。",
+                prompt: `
+                    <p class="font-semibold">示例指令 (PCTF框架):</p>
+                    <div class="mt-2 p-3 bg-gray-100 rounded-md text-sm">
+                        <p><strong>(P) 角色:</strong> 你是一家顶尖科技公司的市场情报分析师。</p>
+                        <p><strong>(C) 背景:</strong> 我需要为执行团队准备一份关于过去7天全球“具身智能”领域最重要进展的周报。</p>
+                        <p><strong>(T) 任务:</strong> 扫描全网信息，综合关键要点，识别技术突破、融资事件和对手动向。</p>
+                        <p><strong>(F) 格式:</strong> 以简洁的备忘录形式呈现，包含三个部分，并提供新闻来源链接。</p>
+                    </div>`
+            },
+            {
+                title: "场景二：激活内部知识——从公司数据中获取决策支持",
+                content: `如何安全、高效地利用AI分析公司内部的海量文档（如财报、战略规划）是高管最关心的问题之一。`,
+                recommendation: "<strong>工具选择:</strong> <strong>Gemini 2.5 Pro</strong>（多文档分析）和 <strong>Kimi-K2</strong>（单篇超长文档分析）是此场景下的最佳选择，它们都拥有超大的上下文窗口。",
+                prompt: `
+                    <p class="font-semibold">示例指令 (多文档分析):</p>
+                    <div class="mt-2 p-3 bg-gray-100 rounded-md text-sm">
+                        <p><em>(上传 Q1_Financials.pdf, Q2_Financials.pdf, Annual_Strategic_Plan_2024.pdf)</em></p>
+                        <p><strong>指令1 (数据提取):</strong> 严格依据我提供的三份文件，创建一个表格，对比Q1和Q2的收入、利润率以及研发支出。</p>
+                        <p><strong>指令2 (洞察生成):</strong> 综合分析这三份文件，评估我们Q1和Q2的财务表现是否与年度战略计划中列出的三大核心战略目标保持一致。</p>
+                    </div>`
+            },
+            {
+                title: "场景三：精炼高管沟通——从草稿到演讲稿",
+                content: `AI可以极大地缩短准备发言稿等重要沟通材料的时间，并能根据不同场合和受众进行快速调整。`,
+                recommendation: "<strong>工具选择:</strong> 撰写国际会议稿件首选 <strong>ChatGPT</strong>，中文官方稿件首选 <strong>通义千问</strong>。",
+                prompt: `
+                    <p class="font-semibold">示例指令 (“由一到多”精炼):</p>
+                    <div class="mt-2 p-3 bg-gray-100 rounded-md text-sm">
+                        <p><strong>母稿生成:</strong> (P)扮演企业传播专家, (C)为世界人工智能大会的技术专家听众, (T)撰写15分钟关于“具身智能未来”的演讲稿, (F)基调前瞻、深刻。</p>
+                        <p><strong>精炼指令:</strong> 基于这份最终的15分钟演讲稿，请将其最核心的信息提炼成一段强有力的3分钟摘要。这个摘要将用于与一位关键政府部长的单独会面。它必须清晰、简洁，并聚焦于最重要的三个观点。</p>
+                    </div>`
+            }
+        ]
+    };
+
+    const tabs = document.querySelectorAll('#main-tabs button');
+    const sections = document.querySelectorAll('.content-section');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.getAttribute('data-tab');
+
+            tabs.forEach(t => {
+                t.classList.remove('tab-active');
+                t.classList.add('tab-inactive');
+            });
+            tab.classList.add('tab-active');
+            tab.classList.remove('tab-inactive');
+
+            sections.forEach(section => {
+                if (section.id === target) {
+                    section.classList.add('active');
+                } else {
+                    section.classList.remove('active');
+                }
+            });
+        });
+    });
+
+    const taskButtonsContainer = document.getElementById('task-buttons');
+    const taskNames = Object.keys(appData.tasks);
+    taskNames.forEach(taskName => {
+        const button = document.createElement('button');
+        button.className = 'px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
+        button.textContent = taskName;
+        button.addEventListener('click', () => {
+            updateChartAndReasoning(taskName);
+        });
+        taskButtonsContainer.appendChild(button);
+    });
+
+    const ctx = document.getElementById('toolChart').getContext('2d');
+    let toolChart;
+
+    function createChart(taskName) {
+        if (toolChart) {
+            toolChart.destroy();
+        }
+        const data = appData.tasks[taskName];
+        toolChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: appData.tools,
+                datasets: [{
+                    label: `“${taskName}” 任务评分 (满分5分)`,
+                    data: data,
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.6)',
+                        'rgba(16, 185, 129, 0.6)',
+                        'rgba(234, 179, 8, 0.6)',
+                        'rgba(239, 68, 68, 0.6)',
+                        'rgba(139, 92, 246, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(59, 130, 246, 1)',
+                        'rgba(16, 185, 129, 1)',
+                        'rgba(234, 179, 8, 1)',
+                        'rgba(239, 68, 68, 1)',
+                        'rgba(139, 92, 246, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 5,
+                        grid: { display: false }
+                    },
+                    y: { grid: { color: '#e5e7eb' } }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.x !== null) { label += `${context.parsed.x}分`; }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateChartAndReasoning(taskName) {
+        const data = appData.tasks[taskName];
+        toolChart.data.datasets[0].data = data;
+        toolChart.data.datasets[0].label = `“${taskName}” 任务评分 (满分5分)`;
+        toolChart.update();
+        
+        const reasoningContainer = document.getElementById('chart-reasoning');
+        reasoningContainer.innerHTML = '';
+        const title = document.createElement('h3');
+        title.className = 'text-xl font-bold mb-4 text-gray-800';
+        title.textContent = '评分依据';
+        reasoningContainer.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+        
+        appData.tools.forEach((tool, index) => {
+            const reasonText = appData.reasons[taskName][tool];
+            const score = data[index];
+            const card = document.createElement('div');
+            card.className = 'p-4 rounded-lg border';
+            
+            const colors = [
+                {bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800'},
+                {bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-800'},
+                {bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-800'},
+                {bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800'},
+                {bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-800'}
+            ];
+            
+            card.classList.add(colors[index].bg, colors[index].border);
+
+            card.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <h4 class="font-bold ${colors[index].text}">${tool}</h4>
+                    <span class="font-bold text-lg ${colors[index].text}">${score}分</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-600">${reasonText}</p>
+            `;
+            grid.appendChild(card);
+        });
+        reasoningContainer.appendChild(grid);
+    }
+
+    createChart(taskNames[0]);
+    updateChartAndReasoning(taskNames[0]);
+
+
+    const pctfBuilder = document.getElementById('pctf-builder');
+    const promptOutput = document.getElementById('prompt-output');
+    const inputs = pctfBuilder.querySelectorAll('[data-pctf]');
+
+    function updatePromptPreview() {
+        let promptText = '';
+        inputs.forEach(input => {
+            if (input.value.trim() !== '') {
+                promptText += `${input.dataset.pctf}: ${input.value.trim()}\n\n`;
+            }
+        });
+        promptOutput.textContent = promptText || '请在上方输入框中填写内容以生成提示词...';
+    }
+
+    inputs.forEach(input => {
+        input.addEventListener('keyup', updatePromptPreview);
+    });
+    updatePromptPreview();
+
+
+    const accordionContainer = document.getElementById('accordion-container');
+    appData.scenarios.forEach((scenario, index) => {
+        const accordionItem = document.createElement('div');
+        accordionItem.className = 'border border-gray-200 rounded-lg';
+        accordionItem.innerHTML = `
+            <button class="w-full flex justify-between items-center p-4 text-left font-medium text-gray-800 hover:bg-gray-100 focus:outline-none">
+                <span>${scenario.title}</span>
+                <span class="transform transition-transform duration-200">&#9662;</span>
+            </button>
+            <div class="hidden p-4 border-t border-gray-200 bg-gray-50">
+                <p class="mb-4 text-gray-600">${scenario.content}</p>
+                <p class="mb-4 text-gray-700">${scenario.recommendation}</p>
+                <div>${scenario.prompt}</div>
+            </div>
+        `;
+        accordionContainer.appendChild(accordionItem);
+
+        const button = accordionItem.querySelector('button');
+        const content = accordionItem.querySelector('div');
+        const icon = accordionItem.querySelector('span:last-child');
+
+        button.addEventListener('click', () => {
+            const isHidden = content.classList.contains('hidden');
+            content.classList.toggle('hidden');
+            icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        });
+    });
+
+});
+</script>
+
+</body>
+</html>
